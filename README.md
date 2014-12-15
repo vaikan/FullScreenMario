@@ -1,6 +1,10 @@
 FullScreenMario
 ===============
 
+### ***This code is outdated, poorly written, and due to be phased out within a year. It is kept here for historical purposes only. A new version is under development.***
+
+*Active development of a version of FullScreenMario that uses JSON for maps and JS objects for Things is located at https://github.com/Diogenesthecynic/FullScreenMario-JSON. Not all functionality has been copied over to that project, and many maps there are missing key features. Once it has completely made up the features from the main branch, it will be merged back into the project here.*
+
 An HTML5 remake of the original Super Mario Brothers - expanded for modern browsing.
 
 ------------------------------------------------------------------------------------
@@ -54,23 +58,23 @@ Here's a quick set of cheat codes you can use during the game. If you're using t
   </tr>
 
   <tr>
-    <td><code>marioShroom(mario)</code></td>
-    <td>The equivalent of Mario touching a Mushroom or FireFlower item.</td>
+    <td><code>playerShroom(player)</code></td>
+    <td>The equivalent of the player touching a Mushroom or FireFlower item.</td>
   </tr>
 
   <tr>
-    <td><code>marioStar(mario)</code></td>
-    <td>The equivalent of Mario touching a Star item. Note that if you want Mario to be invincible for the rest of the current map, use <code>++mario.star</code>.</td>
+    <td><code>playerStar(player)</code></td>
+    <td>The equivalent of the player touching a Star item. Note that if you want the player to be invincible for the rest of the current map, use <code>++player.star</code>.</td>
   </tr>
 
   <tr>
-    <td><code>scrollMario(X)</code></td>
-    <td>Scrolls the window horizontally by X, keeping Mario in the same spot relative to the screen.</td>
+    <td><code>scrollPlayer(X)</code></td>
+    <td>Scrolls the window horizontally by X, keeping the player in the same spot relative to the screen.</td>
   </tr>
 
   <tr>
     <td><code>scrollTime(T)</code></td>
-    <td>Floats Mario through the rest of the level (beware, this is best used on the Random worlds!).</td>
+    <td>Floats the player through the rest of the level (beware, this is best used on the Random worlds!).</td>
   </tr>
 
   <tr>

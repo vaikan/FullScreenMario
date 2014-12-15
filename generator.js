@@ -472,7 +472,7 @@ function endCastleInsideRandomFinal(xloc) {
 function placeRandomCastleNPC(xloc) {
   var npc = pushPreThing(Toad, xloc + 194, 12).object;
   npc.text = [
-      pushPreText({innerHTML: "THANK YOU MARIO!"}, xloc + 160, 66).object,
+      pushPreText({innerHTML: "THANK YOU " + window.player.title.toUpperCase() + "!"}, xloc + 160, 66).object,
       pushPreText({innerHTML: "LOL YOU THOUGHT THERE WOULD BE SOMETHING HERE DIDN'T YOU!"}, xloc + 148, 50).object
     ];
 }
@@ -1068,7 +1068,7 @@ function pushRandomObstacle(xloc, i) {
     // Adding a Pipe
     case 0: case 1:
       if(i > 1) {
-        // The highest possible pipe will be 40 units (5 blocks) high, which is higher than Mario can jump
+        // The highest possible pipe will be 40 units (5 blocks) high, which is higher than the player can jump
         // That's why it's only reached if map.hadObstacle = true
         addPipeRandom(xloc + i * 8, 0, (randTrue(2 + (map.hadObstacle == true && map.hadPipe == false && i > 7)) + 2) * 8);
         map.hadObstacle = map.hadPipe = true;
@@ -1168,7 +1168,7 @@ function addDistanceCounter() {
             });
   body.appendChild(counter);
   TimeHandler.addEventInterval(function(counter) {
-    data.traveled = max(0,Math.round((mario.right + gamescreen.left) / unitsizet8) - 3);
+    data.traveled = max(0,Math.round((player.right + gamescreen.left) / unitsizet8) - 3);
     counter.innerText = (data.traveledold + data.traveled) + " blocks traveled";
   }, 3, Infinity, counter);
 }

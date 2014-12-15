@@ -3,22 +3,22 @@
 
 function FullScreenMario() {
   var time_start = Date.now();
-  
+
   // Thanks, Obama...
   ensureLocalStorage();
-  
+
   // I keep this cute little mini-library for some handy functions
   TonedJS(true);
-  
+
   // It's useful to keep references to the body
   window.body = document.body;
   window.bodystyle = body.style;
-  
+
   // Know when to shut up
   window.verbosity = {Maps: false,
                       Sounds: false,
                       };
-  
+
   window.requestAnimationFrame = window.requestAnimationFrame
                            || window.mozRequestAnimationFrame
                            || window.webkitRequestAnimationFrame
@@ -51,10 +51,7 @@ function FullScreenMario() {
   // With that all set, set the map to World11.
   window.gameon = true;
   setMap(1,1);
-  
-  // Load sounds after setting the map, since it uses clearAllTimeouts
-  startLoadingSounds();
-  
+
   log("It took " + (Date.now() - time_start) + " milliseconds to start.");
 }
 
@@ -64,7 +61,7 @@ function ensureLocalStorage() {
   try {
   if(!window.hasOwnProperty("localStorage"))
     window.localStorage = { crappy: true };
-  
+
   // Some browsers (mainly IE) won't allow it on a local machine anyway
   if(window.localStorage) ls_ok = true;
  }
@@ -81,14 +78,14 @@ function ensureLocalStorage() {
 function resetMeasurements() {
   resetUnitsize(4);
   resetTimer(1000 / 60);
-  
+
   window.jumplev1 = 32;
   window.jumplev2 = 64;
   window.ceillev  = 88; // The floor is 88 spaces (11 blocks) below the yloc = 0 level
   window.ceilmax  = 104; // The floor is 104 spaces (13 blocks) below the top of the screen (yloc = -16)
   window.castlev  = -48;
   window.paused   = true;
-  
+
   resetGameScreen();
   if(!window.parentwindow) window.parentwindow = false;
 }
@@ -121,13 +118,13 @@ function getGameScreen() {
   // Middlex is static and only used for scrolling to the right
   this.middlex = (this.left + this.right) / 2;
   // this.middlex = (this.left + this.right) / 3;
-  
+
   // This is the bottom of the screen - water, pipes, etc. go until here
   window.botmax = this.height - ceilmax;
   if(botmax < unitsize) {
     body.innerHTML = "<div><br>Your screen isn't high enough. Make it taller, then refresh.</div>";
   }
-  
+
   // The distance at which Things die from falling
   this.deathheight = this.bottom + 48;
 }
@@ -153,6 +150,78 @@ function resetEvents() {
   });
 }
 
+// Sounds are done with AudioPlayr.js
+function resetSounds() {
+  window.sounds = {};
+  window.theme = false;
+
+  window.AudioPlayer = new AudioPlayr({
+    directory: "Sounds",
+    getVolumeLocal: function() { return .49; },
+    getThemeDefault: function() { return area.theme; },
+    library: {
+      Sounds: [
+        "Bowser Falls",
+        "Bowser Fires",
+        "Break Block",
+        "Bump",
+        "Coin",
+        "Ending",
+        "Fireball",
+        "Firework",
+        "Flagpole",
+        "Gain Life",
+        "Game Over 2",
+        "Game Over",
+        "Hurry",
+        "Into the Tunnel",
+        "Jump Small",
+        "Jump Super",
+        "Kick",
+        "Level Complete",
+        "Player Dies",
+        "Pause",
+        "Pipe",
+        "Power Down",
+        "Powerup Appears",
+        "Powerup",
+        "Stage Clear",
+        "Vine Emerging",
+        "World Clear",
+        "You Dead"
+      ],
+      Themes: [
+        "Castle",
+        "Overworld",
+        "Underwater",
+        "Underworld",
+        "Star",
+        "Sky",
+        "Hurry Castle",
+        "Hurry Overworld",
+        "Hurry Underwater",
+        "Hurry Underworld",
+        "Hurry Star",
+        "Hurry Sky"
+      ]
+    }
+  });
+}
+
+// Quadrants are done with QuadsKeepr.js
+// This starts off with 7 cols and 6 rows (each has 1 on each side for padding)
+function resetQuadrants() {
+  window.QuadsKeeper = new QuadsKeepr({
+    num_rows: 5,
+    num_cols: 6,
+    screen_width: window.innerWidth,
+    screen_height: window.innerHeight,
+    tolerance: unitsized2,
+    onUpdate: spawnMap,
+    onCollide: false
+  });
+}
+
 // Variables regarding the state of the game
 // This is called in setMap to reset everything
 function resetGameState(nocount) {
@@ -170,24 +239,23 @@ function resetGameState(nocount) {
   // Keep a history of pressed keys
   window.gamehistory = [];
   // Clear audio
-  pauseAllSounds();
-  sounds = {};
+  AudioPlayer.pause();
 }
 
 function scrollWindow(x, y) {
   x = x || 0; y = y || 0;
   var xinv = -x, yinv = -y;
-  
+
   gamescreen.left += x; gamescreen.right += x;
   gamescreen.top += y; gamescreen.bottom += y;
-  
+
   shiftAll(characters, xinv, yinv);
   shiftAll(solids, xinv, yinv);
   shiftAll(scenery, xinv, yinv);
-  shiftAll(quads, xinv, yinv);
+  shiftAll(QuadsKeeper.getQuadrants(), xinv, yinv);
   shiftElements(texts, xinv, yinv);
-  updateQuads(xinv);
-  
+  QuadsKeeper.updateQuadrants(xinv);
+
   if(window.playediting) scrollEditor(x, y);
 }
 function shiftAll(stuff, x, y) {
@@ -202,15 +270,15 @@ function shiftElements(stuff, x, y) {
   }
 }
 
-// Similar to scrollWindow, but saves mario's x-loc
-function scrollMario(x, y, see) {
-  var saveleft = mario.left,
-      savetop = mario.top;
+// Similar to scrollWindow, but saves the player's x-loc
+function scrollPlayer(x, y, see) {
+  var saveleft = player.left,
+      savetop = player.top;
   y = y || 0;
   scrollWindow(x,y);
-  setLeft(mario, saveleft, see);
-  setTop(mario, savetop + y * unitsize, see);
-  updateQuads();
+  setLeft(player, saveleft, see);
+  setTop(player, savetop + y * unitsize, see);
+  QuadsKeeper.updateQuadrants();
 }
 
 // Calls log if window.verbosity has the type enabled

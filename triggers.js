@@ -15,7 +15,7 @@ function resetTriggers() {
     q:      [81],                                                        // q
     l:      [76],                                                        // l
   });
-  
+
   // Gamepad.js support for joysticks and controllers
   window.gamepad = new Gamepad();
   gamepad.bind(Gamepad.Event.BUTTON_DOWN, ControlsPipe("keydown", true));
@@ -23,10 +23,10 @@ function resetTriggers() {
   gamepad.bind(Gamepad.Event.AXIS_CHANGED, function(event) {
     var value = event.value,
         value_abs = abs(value);
-    
+
     // Don't allow tremors
     if(value_abs < 0.1) return;
-    
+
     // Depending on the axis used...
     switch(event.axis) {
       // Left stick, vertical
@@ -67,7 +67,7 @@ function resetTriggers() {
       oncontextmenu: contextmenu,
       onmousedown: mousedown
     });
-  
+
   // Set UI triggers
   setMessageTriggers();
 }
@@ -87,19 +87,18 @@ function Controls(pipes, gamepadPipes) {
     // Right
     right: function(keys) {
       keys.run = 1;
-      keys.right_down = true; // independent of changes to mario.keys.run
+      keys.right_down = true; // independent of changes to player.keys.run
     },
     // Up / Jump
     up: function(keys) {
       keys.up = true;
-      if(mario.canjump &&/* !mario.crouching &&*/ (mario.resting || map.underwater)) {
+      if(player.canjump &&/* !player.crouching &&*/ (player.resting || map.underwater)) {
         keys.jump = 1;
-        mario.canjump = keys.jumplev = 0;
-        // To do: can mario make a jumping sound during the spring, and during the pipe cutscenes?
-        if(mario.power > 1) play("Jump Super");
-        else play("Jump Small");
+        player.canjump = keys.jumplev = 0;
+        // To do: can player make a jumping sound during the spring, and during the pipe cutscenes?
+        AudioPlayer.play(player.power > 1 ? "Jump Super" : "Jump Small");
         if(map.underwater) setTimeout(function() {
-          mario.jumping = keys.jump = false;
+          player.jumping = keys.jump = false;
         }, timer * 14);
       }
     },
@@ -109,8 +108,8 @@ function Controls(pipes, gamepadPipes) {
     },
     // Sprint / Fire
     sprint: function(keys) {
-      if(mario.power == 3 && keys.sprint == 0 && !keys.crouch)
-        mario.fire();
+      if(player.power == 3 && keys.sprint == 0 && !keys.crouch)
+        player.fire();
       keys.sprint = 1;
     },
     // Pause
@@ -120,7 +119,7 @@ function Controls(pipes, gamepadPipes) {
     },
     // Mute / Unmute
     mute: function(keys) {
-      toggleMute();
+      AudioPlayer.toggleMute();
     },
     // qqqqqqq
     q: function(keys) {
@@ -149,7 +148,7 @@ function Controls(pipes, gamepadPipes) {
     // Up
     up: function(keys) {
       if(!map.underwater) keys.jump = keys.up = 0;
-      mario.canjump = true;
+      player.canjump = true;
     },
     // Down
     down: function(keys) {
@@ -186,7 +185,7 @@ function Controls(pipes, gamepadPipes) {
 function ControlsPipe(name, strict) {
   var responses = controls[name];
   return function(event) {
-    if((strict && ((mario && mario.dead) || window.paused)) || window.nokeys) return;
+    if((strict && ((player && player.dead) || window.paused)) || window.nokeys) return;
 
     // Allow this to be used as keyup(37) or keyup({which: 37})
     if(typeof(event) != "number" || event.which || event.control)
@@ -194,7 +193,7 @@ function ControlsPipe(name, strict) {
 
     // If there is a known response to this character code, do it
     if(responses[event])
-      responses[event](mario.keys);
+      responses[event](player.keys);
     // Otherwise only complain if verbosity[name] is true
     else mlog(name, "Could not", name,  event);
 
@@ -204,13 +203,13 @@ function ControlsPipe(name, strict) {
 }
 
 function keydown(event) {
-  if((mario && mario.dead) || window.paused || window.nokeys) return;
+  if((player && player.dead) || window.paused || window.nokeys) return;
   var responses = controls["keydown"];
   // Allow this to be used as keyup(37) or keyup({which: 37})
   if(typeof(event) === "object" || event.which)
     event = event.which;
   if(responses[event])
-      responses[event](mario.keys);
+      responses[event](player.keys);
 
   window.gamehistory[gamecount] = [keydown, event];
 }
@@ -222,7 +221,7 @@ function keyup(event) {
   if(typeof(event) === "object" || event.which)
     event = event.which;
   if(responses[event])
-      responses[event](mario.keys);
+      responses[event](player.keys);
 
   window.gamehistory[gamecount] = [keyup, event];
 }
@@ -253,7 +252,7 @@ function scriptKeys(oldhistory) {
 
 
 function lulz(options, timer) {
-  mario.star = true;
+  player.star = true;
   options = options || [Goomba];
   timer = timer || 7;
   TimeHandler.addEventInterval(function() {
@@ -279,7 +278,28 @@ function maxlulz() {
     }, 7, Infinity, ["Overworld", "Underworld", "Underwater", "Sky", "Castle"]);
 }
 
+//Function to map a new key to a new action
+function mapKeyToControl(action, keyCode) {
 
+  //check if this mapping already exists
+  if(window.controls.pipes[action].indexOf(keyCode) != -1) {
+    return;
+  }
+
+  //add the new key to the current mapping
+  window.controls.pipes[action].push(keyCode);
+  var newPipes = window.controls.pipes;
+
+  //Update the controls of the game
+  window.controls = new Controls(newPipes);
+  //Update the links between events and the game
+  proliferate(body, {
+      onkeydown: ControlsPipe("keydown", true),
+      onkeyup: ControlsPipe("keyup", false),
+      oncontextmenu: contextmenu,
+      onmousedown: mousedown
+    });
+}
 
 /* Triggers (from a UI)
 */
@@ -288,14 +308,17 @@ function setMessageTriggers() {
   var command_codes = {
     setMap: triggerSetMap,
     startEditor: function() { loadEditor(); },
-    toggleOption: function(data) { 
+    toggleOption: function(data) {
       var name = "toggle" + data.option;
       console.log(name, window[name]);
       if(window[name]) window[name]();
       else log("Could not toggle", name);
-    }
+    },
+	setKey: function(data) {
+	  mapKeyToControl(data.action, data.keyCode);
+	}
   };
-  
+
   // When a message is received, send it to the appropriate command code
   window.addEventListener("message", function(event) {
     var data = event.data,
@@ -312,7 +335,7 @@ function setMessageTriggers() {
 
 // The UI has requested a map change
 function triggerSetMap(data) {
-  clearMarioStats();
+  clearPlayerStats();
   setMap.apply(this, data.map || []);
   setLives(3);
 }
